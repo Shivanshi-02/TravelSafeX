@@ -11,9 +11,6 @@ Website Images = <img width="1917" height="1053" alt="Screenshot 2026-06-16 1554
 <img width="1918" height="1078" alt="Screenshot 2026-06-16 155236" src="https://github.com/user-attachments/assets/7e314ab8-74d3-4c00-8aaa-da18a3af84bf" />
 <img width="1765" height="850" alt="Screenshot 2026-06-16 155138" src="https://github.com/user-attachments/assets/175b2ec4-9b30-4d7d-b9fc-6f8030fbb08d" />
 <img width="1891" height="847" alt="Screenshot 2026-06-16 154925" src="https://github.com/user-attachments/assets/f0284dd9-1a66-4d9a-8faf-419061d65e28" />
-<img width="1893" height="867" alt="Screenshot 2026-06-16 090049" src="https://github.com/user-attachments/assets/d2282857-01ae-48ae-9c8a-df6b26326194" />
-<img width="1893" height="867" alt="Screenshot 2026-06-16 090049" src="https://github.com/user-attachments/assets/7ad30ba0-b81d-47a3-b9fc-e869715afec1" />
-<img width="440" height="547" alt="Screenshot 2026-06-16 063803" src="https://github.com/user-attachments/assets/1e936742-6df4-4820-ae11-572b5a721cdb" />
 
 
 ### Predictive Life-Security Infrastructure for Safer Urban Mobility
