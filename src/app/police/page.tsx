@@ -1,0 +1,528 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import {
+  Shield,
+  ArrowLeft,
+  FileText,
+  Layers,
+  Activity,
+  Play,
+  RotateCcw,
+  AlertOctagon,
+  TrendingUp,
+  Bell
+} from "lucide-react";
+import { useTravelSafeStore } from "@/store/useTravelSafeStore";
+import { useMockStreams } from "@/hooks/useMockStreams";
+import dynamic from "next/dynamic";
+
+const CrimeChart = dynamic(() => import("@/components/police/CrimeChart"), {
+  ssr: false,
+});
+
+const PoliceCommandMap = dynamic(() => import("@/components/police/PoliceCommandMap"), {
+  ssr: false,
+});
+
+interface TimelineLog {
+  time: string;
+  msg: string;
+  type: "info" | "alert" | "dispatch" | "success";
+}
+
+export default function PolicePage() {
+  useMockStreams(); // Start streams
+
+  // Zustand state triggers
+  const setSystemMode = useTravelSafeStore((s) => s.setSystemMode);
+  const addNotification = useTravelSafeStore((s) => s.addNotification);
+
+  // Simulation Controls & Position states
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [simStep, setSimStep] = useState(0);
+  const [incidentState, setIncidentState] = useState<"SAFE" | "ACTIVE_JOURNEY" | "INCIDENT_ALERT" | "TRACKING" | "RECOVERED">("SAFE");
+
+  // Moving coordinate positions for Noida Sector 62 & 63
+  const [positions, setPositions] = useState({
+    victim: [28.6273, 77.3725] as [number, number],
+    device: [28.6273, 77.3725] as [number, number],
+    police: [28.6300, 77.3650] as [number, number],
+    guardian: [28.6225, 77.3660] as [number, number]
+  });
+
+  const [metrics, setMetrics] = useState({
+    speed: 15,
+    covered: 0.8,
+    remaining: 4.3,
+    direction: "SW",
+    eta: "12 Minutes"
+  });
+
+  // Layer Visibility Toggles
+  const [layers, setLayers] = useState({
+    victimRoute: true,
+    deviceRoute: true,
+    guardianRoutes: true,
+    policeRoutes: true,
+    safeZones: true,
+    hospitals: true,
+    cctv: true,
+    hotspots: true,
+    traffic: false
+  });
+
+  const [timelineLogs, setTimelineLogs] = useState<TimelineLog[]>([
+    { time: "22:45 PM", msg: "Police Command Terminal online & listening.", type: "info" }
+  ]);
+
+  const addLog = useCallback((time: string, msg: string, type: "info" | "alert" | "dispatch" | "success") => {
+    setTimelineLogs((prev) => [{ time, msg, type }, ...prev]);
+  }, []);
+
+  // Hotspots Crime Index Hourly chart data
+  const crimeTrends = [
+    { hour: "00:00", crimeIndex: 45 },
+    { hour: "04:00", crimeIndex: 30 },
+    { hour: "08:00", crimeIndex: 15 },
+    { hour: "12:00", crimeIndex: 20 },
+    { hour: "16:00", crimeIndex: 35 },
+    { hour: "20:00", crimeIndex: 78 },
+    { hour: "23:59", crimeIndex: 90 },
+  ];
+
+  // Simulation Runner Loop
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    let timer: NodeJS.Timeout;
+
+    const runSimulation = () => {
+      switch (simStep) {
+        case 0: // Commuter is travelling normally (Green Route)
+          setIncidentState("ACTIVE_JOURNEY");
+          setPositions({
+            victim: [28.6285, 77.3715],
+            device: [28.6285, 77.3715],
+            police: [28.6300, 77.3650],
+            guardian: [28.6225, 77.3660]
+          });
+          setMetrics({
+            speed: 15,
+            covered: 0.8,
+            remaining: 4.3,
+            direction: "SW",
+            eta: "12 Minutes"
+          });
+          addLog("22:47 PM", "Priya Sharma started active journey (Sector 62 → Metro).", "info");
+          break;
+
+        case 1: // Emergency Detected (Phone Snatch + Scream)
+          setSystemMode("ALERT");
+          setIncidentState("INCIDENT_ALERT");
+          setPositions({
+            victim: [28.6310, 77.3780],
+            device: [28.6310, 77.3780],
+            police: [28.6300, 77.3650],
+            guardian: [28.6225, 77.3660]
+          });
+          setMetrics({
+            speed: 0,
+            covered: 1.4,
+            remaining: 3.7,
+            direction: "--",
+            eta: "--"
+          });
+          addLog("22:52 PM", "⚠️ THREAT DETECTED: Phone Snatch event at Sector 63, Noida (98% Conf).", "alert");
+          addLog("22:52 PM", "🎙️ VoiceShield: Audio distress screamed. FRONT CAMERA ACTIVATED.", "alert");
+          addNotification("🚨 Emergency Alert Noida Sector 63: Combined Sensor Trigger!");
+          break;
+
+        case 2: // Device Fleeing, Responders Accepting
+          setIncidentState("TRACKING");
+          setPositions({
+            victim: [28.6310, 77.3780], // Stranded
+            device: [28.6340, 77.3750], // Fleeing
+            police: [28.6320, 77.3670], // Moving
+            guardian: [28.6250, 77.3700] // Moving
+          });
+          setMetrics({
+            speed: 52,
+            covered: 1.7,
+            remaining: 1.2,
+            direction: "N-NE",
+            eta: "3 Minutes"
+          });
+          addLog("22:53 PM", "Witness Ledger locked. Recording stream pushed to blockchain.", "info");
+          addLog("22:53 PM", "Guardian SOS propagation sent to 847 local nodes.", "info");
+          addLog("22:54 PM", "Aadhaar Guardian Rahul Singh ACCEPTED mission (ETA: 4m).", "dispatch");
+          break;
+
+        case 3: // Interception Closes
+          setPositions({
+            victim: [28.6310, 77.3780],
+            device: [28.6360, 77.3720],
+            police: [28.6350, 77.3690],
+            guardian: [28.6280, 77.3740]
+          });
+          setMetrics({
+            speed: 34,
+            covered: 2.1,
+            remaining: 0.3,
+            direction: "NW",
+            eta: "1 Minute"
+          });
+          addLog("22:55 PM", "PCR Unit P-14 dispatched from Noida Sector 62 PS.", "dispatch");
+          addLog("22:58 PM", "PCR Unit P-14 closing coordinates. Distance: 300m.", "dispatch");
+          break;
+
+        case 4: // Intercepted and Recovered
+          setIncidentState("RECOVERED");
+          setSystemMode("SAFE");
+          setPositions({
+            victim: [28.6310, 77.3780],
+            device: [28.6360, 77.3720],
+            police: [28.6360, 77.3720],
+            guardian: [28.6310, 77.3780]
+          });
+          setMetrics({
+            speed: 0,
+            covered: 2.4,
+            remaining: 0,
+            direction: "--",
+            eta: "0 Minutes"
+          });
+          addLog("23:01 PM", "✓ SUCCESS: Stolen device recovered. Suspect detained.", "success");
+          addLog("23:02 PM", "✓ Auto-FIR Draft pushed to Sector 62 Magistrate queue.", "success");
+          addNotification("Police Command: Incident resolved. Commuter safe.");
+          setIsPlaying(false);
+          break;
+      }
+
+      if (simStep < 4) {
+        timer = setTimeout(() => {
+          setSimStep((prev) => prev + 1);
+        }, 5000);
+      }
+    };
+
+    runSimulation();
+
+    return () => clearTimeout(timer);
+  }, [isPlaying, simStep, setSystemMode, addNotification, addLog]);
+
+  const handleStartSim = () => {
+    setSimStep(0);
+    setIsPlaying(true);
+  };
+
+  const handleResetSim = () => {
+    setIsPlaying(false);
+    setSimStep(0);
+    setIncidentState("SAFE");
+    setSystemMode("SAFE");
+    setPositions({
+      victim: [28.6273, 77.3725],
+      device: [28.6273, 77.3725],
+      police: [28.6300, 77.3650],
+      guardian: [28.6225, 77.3660]
+    });
+    setMetrics({
+      speed: 15,
+      covered: 0.8,
+      remaining: 4.3,
+      direction: "SW",
+      eta: "12 Minutes"
+    });
+    setTimelineLogs([
+      { time: "22:45 PM", msg: "Police Command Terminal online & listening.", type: "info" }
+    ]);
+  };
+
+  const toggleLayer = (layerKey: keyof typeof layers) => {
+    setLayers((prev) => ({ ...prev, [layerKey]: !prev[layerKey] }));
+  };
+
+  const isEmergencyActive = incidentState !== "SAFE" && incidentState !== "ACTIVE_JOURNEY" && incidentState !== "RECOVERED";
+
+  return (
+    <div className={`min-h-screen relative overflow-hidden ${isEmergencyActive ? "grid-bg-emergency bg-[#0d0404]" : "grid-bg bg-[#050508]"} transition-colors duration-1000 text-white`}>
+      
+      {/* Top HUD Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-xl bg-black/40 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+          >
+            <ArrowLeft size={16} />
+          </Link>
+          <div className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded-md flex items-center justify-center ${isEmergencyActive ? "bg-red-500/20" : "bg-purple-500/20"}`}>
+              <Shield size={14} className={isEmergencyActive ? "text-red-400" : "text-purple-400"} />
+            </div>
+            <span className="text-xs font-bold font-[family-name:var(--font-display)] text-white/95">
+              TravelSafe X <span className="text-white/40">· National Safety Command Desk</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] px-2.5 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono text-[9px] font-bold">
+            SECTOR: DELHI-NCR COMMAND
+          </span>
+          <span className={`w-2.5 h-2.5 rounded-full ${isEmergencyActive ? "bg-red-500 animate-pulse" : "bg-purple-400"}`} />
+        </div>
+      </nav>
+
+      {/* Dashboard Grid Layout */}
+      <div className="max-w-7xl mx-auto pt-20 px-4 grid grid-cols-12 gap-5 pb-10">
+        
+        {/* LEFT COLUMN: Map Controls, Live Stats & Layer Filters */}
+        <div className="col-span-12 lg:col-span-3 flex flex-col gap-4">
+          
+          {/* Simulator Panel */}
+          <div className="rounded-2xl border border-white/10 bg-[#0a0a0f]/90 p-5 space-y-4 shadow-2xl relative overflow-hidden">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/80 flex items-center gap-2">
+              <Activity size={14} className="text-purple-400" /> Operational Controls
+            </h3>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={handleStartSim}
+                disabled={isPlaying}
+                className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all flex items-center justify-center gap-1.5 ${
+                  isPlaying
+                    ? "bg-purple-500/10 border-purple-500/20 text-purple-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-red-600 to-purple-600 border-red-500/20 text-white hover:shadow-[0_0_20px_rgba(168,85,247,0.4)]"
+                }`}
+              >
+                <Play size={12} /> Simulate Incident
+              </button>
+              
+              <button
+                onClick={handleResetSim}
+                className="py-3 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 hover:text-white transition-all text-xs font-bold uppercase"
+              >
+                <RotateCcw size={12} />
+              </button>
+            </div>
+
+            {/* Simulated Live Stats */}
+            {incidentState !== "SAFE" && (
+              <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2.5 font-mono text-[10px]">
+                <div className="flex justify-between border-b border-white/5 pb-1.5">
+                  <span className="text-white/40">Status:</span>
+                  <span className={`font-bold ${isEmergencyActive ? "text-red-400 animate-pulse" : "text-emerald-400"}`}>
+                    {incidentState}
+                  </span>
+                </div>
+                <div className="space-y-1 text-white/60">
+                  <div className="flex justify-between">
+                    <span>Speed:</span>
+                    <span className="text-white font-bold">{metrics.speed} km/h</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Vector:</span>
+                    <span className="text-white font-bold">{metrics.direction}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>ETA:</span>
+                    <span className="text-cyan-400 font-bold">{metrics.eta}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Distance Covered:</span>
+                    <span className="text-white font-bold">{metrics.covered} KM</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Remaining Dist:</span>
+                    <span className="text-white font-bold">{metrics.remaining} KM</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Layer Filter Panel */}
+          <div className="rounded-2xl border border-white/5 bg-white/[0.01] p-4 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
+              <Layers size={14} className="text-cyan-400" /> Map Layer Filters
+            </h3>
+            
+            <div className="space-y-1.5">
+              {[
+                { key: "victimRoute" as const, label: "Victim Route (Green)", color: "border-emerald-500/20 text-emerald-400" },
+                { key: "deviceRoute" as const, label: "Stolen Device Path (Red)", color: "border-red-500/20 text-red-400" },
+                { key: "policeRoutes" as const, label: "Police Intercepts (Blue)", color: "border-blue-500/20 text-blue-400" },
+                { key: "guardianRoutes" as const, label: "Guardian Rescue Paths", color: "border-yellow-500/20 text-yellow-400" },
+                { key: "safeZones" as const, label: "TravelSafe Guard Hubs", color: "border-emerald-500/20 text-emerald-500" },
+                { key: "hospitals" as const, label: "Hospital Locations", color: "border-pink-500/20 text-pink-400" },
+                { key: "cctv" as const, label: "CCTV Camera Feeds", color: "border-cyan-500/20 text-cyan-400" },
+                { key: "hotspots" as const, label: "Crime Hotspots Radar", color: "border-orange-500/20 text-orange-400" },
+                { key: "traffic" as const, label: "Road Traffic Index", color: "border-zinc-500/20 text-zinc-400" },
+              ].map((layer) => (
+                <button
+                  key={layer.key}
+                  onClick={() => toggleLayer(layer.key)}
+                  className={`w-full p-2.5 rounded-xl border text-left text-[10px] font-semibold flex items-center justify-between transition-all ${
+                    layers[layer.key]
+                      ? "bg-white/5 border-white/10 text-white"
+                      : "bg-transparent border-transparent text-white/30 hover:text-white/50"
+                  }`}
+                >
+                  <span>{layer.label}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${layers[layer.key] ? "bg-cyan-400" : "bg-transparent border border-white/20"}`} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* CENTER COLUMN: The Advanced Live Interception Map */}
+        <div className="col-span-12 lg:col-span-6 flex flex-col gap-4">
+          
+          {/* Header live state warning */}
+          <div className="relative rounded-2xl border border-white/5 bg-[#0a0a0f]/90 p-4 shadow-lg overflow-hidden flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${isEmergencyActive ? "bg-red-500/10 border-red-500/20 animate-pulse text-red-400" : "bg-purple-500/10 border-purple-500/20 text-purple-400"}`}>
+                <AlertOctagon size={18} />
+              </div>
+              <div>
+                <h2 className="text-xs font-bold text-white uppercase tracking-wider font-[family-name:var(--font-display)]">
+                  {isEmergencyActive ? "🚨 INCIDENT DETECTED in Noida Sector 63" : "Active Dispatch Console"}
+                </h2>
+                <p className="text-[10px] text-white/40 mt-0.5">
+                  {isEmergencyActive ? "Phone Snatch + Scream trigger verified by Aadhaar profile." : "Listening for device snatches or vocal distress calls."}
+                </p>
+              </div>
+            </div>
+            
+            {isEmergencyActive && (
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 font-mono font-bold animate-pulse">
+                98% CRITICAL THREAT
+              </span>
+            )}
+          </div>
+
+          {/* Map Display Container */}
+          <div className="relative rounded-3xl border border-white/10 bg-black/40 overflow-hidden h-[460px] shadow-2xl">
+            <PoliceCommandMap
+              isEmergency={isEmergencyActive}
+              simStep={simStep}
+              layers={layers}
+              victimPos={positions.victim}
+              devicePos={positions.device}
+              policePos={positions.police}
+              guardianPos={positions.guardian}
+            />
+
+            {/* Top Left Live HUD indicator */}
+            <div className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-xl bg-black/85 border border-white/10 backdrop-blur-md space-y-1 text-[8px] font-mono text-white/50">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>GPS SYNC STATUS: OPTIMAL</span>
+              </div>
+              <div>LOC: NOIDA SECTOR 62/63 MATRIX</div>
+            </div>
+
+            {/* Bottom Left Interception Panel overlay */}
+            {isEmergencyActive && simStep >= 2 && (
+              <div className="absolute bottom-4 left-4 z-20 p-3 rounded-2xl bg-black/90 border border-white/10 backdrop-blur-md max-w-[210px] space-y-1.5 text-[9px] font-mono">
+                <span className="text-[8px] uppercase tracking-wider text-cyan-400 font-bold block">INTERCEPTION SYSTEM ACTIVE</span>
+                <div className="text-white/60 space-y-0.5">
+                  <div>Unit: <span className="text-white font-bold">Police P-14</span></div>
+                  <div>ETA: <span className="text-cyan-400 font-bold">3 Minutes</span></div>
+                  <div>Distance: <span className="text-white">1.7 KM Away</span></div>
+                </div>
+                <div className="w-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded py-0.5 text-center text-[7px] font-extrabold uppercase animate-pulse">
+                  Routing Intercept Path
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Chronological Timeline Panel & AI FIR submission */}
+        <div className="col-span-12 lg:col-span-3 flex flex-col gap-4">
+          
+          {/* Timeline Desk */}
+          <div className="rounded-2xl border border-white/5 bg-[#0a0a0f]/90 p-4 space-y-3 flex-1 flex flex-col justify-between h-[360px]">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
+              <Bell size={14} className="text-purple-400" /> Command Incident Logs
+            </h3>
+
+            <div className="flex-1 overflow-y-auto pr-1 my-2 space-y-3 font-mono text-[9px] scrollbar-none max-h-[260px]">
+              {timelineLogs.map((log, i) => (
+                <div key={i} className="flex gap-2 items-start border-l border-white/10 pl-2.5 py-0.5">
+                  <span className="text-purple-400 whitespace-nowrap">{log.time}</span>
+                  <div className="space-y-0.5">
+                    <p className={`leading-relaxed ${
+                      log.type === "alert"
+                        ? "text-red-400 font-bold"
+                        : log.type === "dispatch"
+                          ? "text-cyan-400"
+                          : log.type === "success"
+                            ? "text-emerald-400 font-semibold"
+                            : "text-white/50"
+                    }`}>{log.msg}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-[7px] text-white/20 select-none text-center">
+              SYSTEM INCIDENT AUDIT LEDGER COMPLIANT
+            </div>
+          </div>
+
+          {/* AI FIR Portal tab preview */}
+          <div className="rounded-2xl border border-white/5 bg-white/[0.01] p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
+                <FileText size={14} className="text-purple-400" /> AI Auto-FIR Center
+              </h3>
+              <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded font-bold uppercase ${
+                incidentState === "RECOVERED" ? "bg-emerald-500/20 text-emerald-400" : isEmergencyActive ? "bg-amber-500/20 text-amber-400 animate-pulse" : "bg-zinc-800 text-white/30"
+              }`}>
+                {incidentState === "RECOVERED" ? "COMPILED" : isEmergencyActive ? "EVALUATING" : "STANDBY"}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-black/50 border border-white/5 h-36 overflow-y-auto font-mono text-[9px] text-white/50 space-y-2 leading-relaxed">
+              {incidentState !== "SAFE" ? (
+                <>
+                  <p className="text-center font-bold text-white border-b border-white/5 pb-1">FIR RECORD SUMMARY</p>
+                  <p><strong>P.S.:</strong> Sector 62 Station · <strong>District:</strong> Noida</p>
+                  <p><strong>Complainant:</strong> Priya Sharma (Aadhaar verified)</p>
+                  <p><strong>Incident Hash:</strong> 0x7e4a1b3f8c...merkle</p>
+                  <p><strong>Offense:</strong> Theft / Snatch (Section 379 IPC / Section 303 BNS)</p>
+                  {incidentState === "RECOVERED" && (
+                    <p className="text-emerald-400 font-bold">✓ Suspect neutralized, device recovered, case ready for legal closure.</p>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center text-white/20">
+                  <FileText size={16} />
+                  <p className="mt-1">Waiting for incident trigger...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Crime trends predictive bottom overview */}
+      <div className="max-w-7xl mx-auto px-4 pb-10">
+        <div className="rounded-2xl border border-white/5 bg-[#0a0a0f]/90 p-5 space-y-3 shadow-2xl">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
+            <TrendingUp size={14} className="text-cyan-400" /> Predictive Hotspot Analysis
+          </h3>
+          <CrimeChart data={crimeTrends} />
+        </div>
+      </div>
+
+    </div>
+  );
+}
