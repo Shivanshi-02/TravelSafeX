@@ -8,7 +8,7 @@ interface CrimeChartProps {
 
 export default function CrimeChart({ data }: CrimeChartProps) {
   return (
-    <div className="h-64 w-full">
+    <div className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <defs>
