@@ -36,6 +36,7 @@ export default function PoliceCommandMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<any>(null);
   const layersGroup = useRef<Record<string, any>>({});
+  const lastSimStep = useRef<number>(-1);
 
   useEffect(() => {
     if (typeof window === "undefined" || !mapRef.current) return;
@@ -183,9 +184,10 @@ export default function PoliceCommandMap({
           [28.6285, 77.3715],
           [28.6295, 77.3705],
           [28.6300, 77.3695],
-          [28.5747, 77.3560]
+          [28.6310, 77.3780], // Noida Sector 63 Snatch Area
+          [28.5747, 77.3560]  // Noida City Centre
         ], {
-          color: isEmergency ? "#ef4444" : "#10b981",
+          color: "#10b981",
           weight: 3.5,
           opacity: 0.8
         }).addTo(groups.routes);
@@ -207,13 +209,12 @@ export default function PoliceCommandMap({
       }
 
       // Police unit path (blue)
-      if (layers.policeRoutes && isEmergency && simStep >= 2) {
+      if (layers.policeRoutes && isEmergency && simStep >= 3) {
         L_inst.polyline([
           [28.6300, 77.3650],
           [28.6320, 77.3670],
           [28.6350, 77.3690],
-          [28.6360, 77.3720],
-          devicePos
+          [28.6380, 77.3700]
         ], {
           color: "#3b82f6",
           weight: 3,
@@ -222,12 +223,12 @@ export default function PoliceCommandMap({
       }
 
       // Guardian responder path (yellow)
-      if (layers.guardianRoutes && isEmergency && simStep >= 2) {
+      if (layers.guardianRoutes && isEmergency && simStep >= 3) {
         L_inst.polyline([
           [28.6225, 77.3660],
           [28.6250, 77.3700],
           [28.6280, 77.3740],
-          devicePos
+          [28.6310, 77.3780]
         ], {
           color: "#eab308",
           weight: 3,
@@ -282,12 +283,12 @@ export default function PoliceCommandMap({
           iconAnchor: [8, 8]
         });
         L_inst.marker(devicePos, { icon: deviceIcon })
-          .bindPopup(`<span class="text-[9px] font-mono text-zinc-900">🚨 Stolen Device Beacon<br/>Speed: 52 km/h</span>`)
+          .bindPopup(`<span class="text-[9px] font-mono text-zinc-900">🚨 Stolen Device Beacon<br/>Speed: 54 km/h</span>`)
           .addTo(groups.routes);
       }
 
       // Moving Police marker
-      if (layers.policeRoutes && isEmergency && simStep >= 2) {
+      if (layers.policeRoutes && isEmergency && simStep >= 3) {
         const policeIcon = L_inst.divIcon({
           className: "custom-map-icon",
           html: `<div class="w-4 h-4 rounded-full border border-white bg-blue-600 shadow-[0_0_10px_#3b82f6] flex items-center justify-center text-[8px] text-white font-extrabold font-mono">P14</div>`,
@@ -300,7 +301,7 @@ export default function PoliceCommandMap({
       }
 
       // Moving Guardian marker
-      if (layers.guardianRoutes && isEmergency && simStep >= 2) {
+      if (layers.guardianRoutes && isEmergency && simStep >= 3) {
         const guardianIcon = L_inst.divIcon({
           className: "custom-map-icon",
           html: `<div class="w-4 h-4 rounded-full border border-white bg-yellow-500 shadow-[0_0_10px_#f59e0b] flex items-center justify-center text-[8px] text-zinc-900 font-extrabold font-mono">G</div>`,
@@ -312,17 +313,22 @@ export default function PoliceCommandMap({
           .addTo(groups.routes);
       }
 
-      // Dynamic view positioning: zoom into incident area if emergency triggers
+      // View bounds logic (only updates zoom when step transitions to avoid jitter during movement animation)
       if (isEmergency) {
-        if (simStep === 1) {
-          map.setView([28.6310, 77.3780], 16); // Zoom into Noida Sec 63 (incident area)
-        } else if (simStep >= 2) {
-          // Fit bounds of victim pos, device pos, and police pos
-          const bounds = L_inst.latLngBounds([victimPos, devicePos, policePos, guardianPos]);
-          map.fitBounds(bounds, { padding: [40, 40] });
+        if (simStep !== lastSimStep.current) {
+          lastSimStep.current = simStep;
+          if (simStep === 1) {
+            map.setView([28.6310, 77.3780], 15);
+          } else if (simStep >= 2) {
+            const bounds = L_inst.latLngBounds([victimPos, devicePos, policePos, guardianPos]);
+            map.fitBounds(bounds, { padding: [40, 40] });
+          }
         }
       } else {
-        map.setView([28.6273, 77.3725], 14); // Back to default CP overview
+        if (lastSimStep.current !== 0) {
+          lastSimStep.current = 0;
+          map.setView([28.6273, 77.3725], 14);
+        }
       }
     };
 
